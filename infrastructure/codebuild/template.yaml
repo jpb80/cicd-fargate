@@ -1,0 +1,115 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack for deploying codebuild pipeline
+Parameters:
+  EcrImageTag:
+    AllowedPattern: "^[A-Za-z0-9]*$"
+    ConstraintDescription: |
+      Ignore-case, alpha-numeric string.
+    Description: |
+      The image tag used for tagging ecr images.
+    Default: latest
+    Type: String
+Resources:
+  CodeBuildPolicy:
+    Type: AWS::IAM::Policy
+    Metadata:
+      Description: Setting IAM policy for service role for CodeBuild
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Effect: Allow
+          Resource: '*'
+        - Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:GetObjectVersion
+            - s3:List*
+          Effect: Allow
+          Resource:
+            - !ImportValue storage-ArtifactsBucketArn
+            - !ImportValue storage-CacheBucketArn
+            - !ImportValue storage-SourceCodeBucketArn
+            - Fn::Join:
+              - ""
+              - - !ImportValue storage-SourceCodeBucketArn
+                - /*
+        - Action:
+            - codecommit:GitPull
+          Effect: Allow
+          Resource:
+            - !ImportValue codecommit-CodeCommitRepoArn
+        - Action:
+            - kms:GenerateDataKey*
+            - kms:Encrypt
+            - kms:Decrypt
+          Effect: Allow
+          Resource: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:/alias/aws/s3
+        - Action:
+            - ecr:GetDownloadUrlForLayer
+            - ecr:BatchGetImage
+            - ecr:BatchCheckLayerAvailability
+            - ecr:PutImage
+            - ecr:InitiateLayerUpload
+            - ecr:UploadLayerPart
+            - ecr:CompleteLayerUpload
+            - ecr:GetAuthorizationToken
+          Effect: Allow
+          Resource: '*'
+      PolicyName: !Sub codebuild-${AWS::StackName}-policy
+      Roles:
+        - !Ref CodeBuildRole
+
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      Description: Creating service role in IAM for AWS CodeBuild
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: codebuild.amazonaws.com
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    DependsOn:
+      - CodeBuildPolicy
+    Properties:
+      Artifacts:
+        Location: !ImportValue storage-ArtifactsBucketName
+        Name: artifact-greeting-app.zip
+        NamespaceType: BUILD_ID
+        Packaging: ZIP
+        Type: S3
+      Cache:
+        Location: !ImportValue storage-CacheBucketName
+        Type: S3
+      Environment:
+        EnvironmentVariables:
+            - Name: IMAGE_TAG
+              Type: PLAINTEXT
+              Value: !Ref EcrImageTag
+            - Name: AWS_DEFAULT_REGION
+              Type: PLAINTEXT
+              Value: !Ref AWS::Region
+            - Name: AWS_ACCOUNT_ID
+              Type: PLAINTEXT
+              Value: !Ref AWS::AccountId
+            - Name: IMAGE_REPO_NAME
+              Type: PLAINTEXT
+              Value: !ImportValue ecr-GreetingAppEcrName
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:2.0
+        Type: LINUX_CONTAINER
+        PrivilegedMode: true
+      Name: !Ref AWS::StackName
+      ServiceRole: !Ref CodeBuildRole
+      Source:
+        Location: github
+        Type: OAUTH

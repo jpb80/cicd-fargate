@@ -1,0 +1,125 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack for deploying codebuild pipeline
+Resources:
+  CacheBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Metadata:
+      Description: Creating Amazon S3 bucket for AWS CodeBuild artifacts
+    Properties:
+      BucketName: !Sub codebuild-cache-${AWS::AccountId}-${AWS::Region}
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Status: Enabled
+            ExpirationInDays: 30
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Ref AWS::StackName
+            - ArtifactsBucket
+
+  ArtifactsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Metadata:
+      Description: Creating Amazon S3 bucket for AWS CodeBuild artifacts
+    Properties:
+      BucketName: !Sub artifacts-${AWS::AccountId}-${AWS::Region}
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Status: Enabled
+            ExpirationInDays: 10
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+      - Key: Name
+        Value: !Join
+        - '-'
+        - - !Ref AWS::StackName
+          - ArtifactsBucket
+
+  SourceCodeBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Metadata:
+      Description: Creating Amazon S3 bucket for CodeCommit source code.
+    Properties:
+      BucketName: !Sub sourcecode-${AWS::AccountId}-${AWS::Region}
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Status: Enabled
+            Transitions:
+              - TransitionInDays: 60
+                StorageClass: STANDARD_IA
+              - TransitionInDays: 365
+                StorageClass: GLACIER
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+      - Key: Name
+        Value: !Join
+        - '-'
+        - - !Ref AWS::StackName
+          - SourceCodeBucket
+
+Outputs:
+  ArtifactsBucketArn:
+    Value: !GetAtt ArtifactsBucket.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-ArtifactsBucketArn
+
+  CacheBucketArn:
+    Value: !GetAtt CacheBucket.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-CacheBucketArn
+
+  ArtifactsBucketName:
+    Value: !Ref ArtifactsBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-ArtifactsBucketName
+
+  CacheBucketName:
+    Value: !Ref CacheBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-CacheBucketName
+
+  SourceCodeBucketName:
+    Value: !Ref SourceCodeBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-SourceCodeBucketName
+
+  SourceCodeBucketArn:
+    Value: !GetAtt SourceCodeBucket.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-SourceCodeBucketArn

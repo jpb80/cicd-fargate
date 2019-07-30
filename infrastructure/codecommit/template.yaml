@@ -1,0 +1,28 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack for deploying codebuild pipeline
+Resources:
+  CodeCommitRepo:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      Code:
+          S3:
+            Bucket: !ImportValue storage-SourceCodeBucketName
+            Key: greeting-app.zip
+      RepositoryName: !Sub source-code-repo-${AWS::Region}
+
+Outputs:
+  CodeCommitRepo:
+    Value: !GetAtt CodeCommitRepo.Name
+    Export:
+      Name: !Sub ${AWS::StackName}-CodeCommitRepoName
+
+  CodeCommitRepoUrl:
+    Value: !GetAtt CodeCommitRepo.CloneUrlHttp
+    Export:
+      Name: !Sub ${AWS::StackName}-CodeCommitRepoUrlHttp
+
+  CodeCommitRepoArn:
+    Value: !GetAtt CodeCommitRepo.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-CodeCommitRepoArn
