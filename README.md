@@ -19,7 +19,7 @@ the image with AWS CodeBuild and deploys the image to AWS ECR.
 * `make build` initiates a CodeBuild job for the greeting-app sourcecode in the CodeCommit repository. Then the new image is pushed to ECR.
 
 ## Run container:
-* `make deploy` pulls the latest image from ECR then initiates docker to run the container. The greeting-app server is running on port 5000.
+* `make run-local` pulls the latest image from ECR then initiates docker to run the container. The greeting-app server is running on port 5000.
 
 
 ## Greeting App API
@@ -40,6 +40,10 @@ storage, and then cloudformation stack. Some stacks will require
 deleting the resources such as s3 bucket with files in it. 
 * Manually delete the admin role.
 
+
+## Future
+* Automate teardown of Cloudformation stacks and resources. 
+* TBD
 
 ## FAQs
 
