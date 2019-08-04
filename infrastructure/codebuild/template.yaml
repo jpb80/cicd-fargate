@@ -10,6 +10,7 @@ Parameters:
       The image tag used for tagging ecr images.
     Default: latest
     Type: String
+
 Resources:
   CodeBuildPolicy:
     Type: AWS::IAM::Policy
@@ -111,5 +112,4 @@ Resources:
       Name: !Ref AWS::StackName
       ServiceRole: !Ref CodeBuildRole
       Source:
-        Location: github
-        Type: OAUTH
+        Type: CODEPIPELINE

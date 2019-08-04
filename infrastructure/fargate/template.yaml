@@ -1,0 +1,162 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Run ECR image as a Fargate container.
+Metadata:
+  Version: '1'
+Parameters:
+  EcrImageTag:
+    AllowedPattern: '^[A-Za-z0-9_-]*$'
+    ConstraintDescription: |
+      Lower or upper case, alpha-numeric string.
+    Default: 'latest'
+    Description: The ECR image tag used for the Fargate container.
+    MaxLength: '32'
+    MinLength: '1'
+    Type: String
+
+  EcrImageName:
+    AllowedPattern: '^[A-Za-z0-9_-]*$'
+    ConstraintDescription: |
+      Lower or upper case, alpha-numeric string.
+    Description: The ECR image name used for the Fargate container.
+    Type: String
+
+  ContainerHostname:
+    Default: 'fargatecontainer'
+    Description: The docker container hostname.
+    MaxLength: '32'
+    MinLength: '1'
+    Type: String
+
+  App:
+    AllowedPattern: '^[A-Za-z0-9_-]*$'
+    ConstraintDescription: |
+      Lower or upper case, alpha-numeric string.
+    Description: The application supported by this infrastructure.
+    Type: String
+
+  Subnets:
+    Description: The comma separated list of SubnetIds.
+    Type: List<AWS::EC2::Subnet::Id>
+
+  SecurityGroups:
+    Description: The comma separated list of SecurityGroups.
+    Type: List<AWS::EC2::SecurityGroup::Id>
+
+Resources:
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+
+  EcsService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !GetAtt EcsCluster.Arn
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups: !Ref SecurityGroups
+          Subnets: !Ref Subnets
+      SchedulingStrategy: REPLICA
+      TaskDefinition: !Ref TaskDefinition
+
+  ECSLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${AWS::StackName}-${AWS::Region}/
+      RetentionInDays: 1
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Memory: "1024"
+      ExecutionRoleArn: !GetAtt TaskDefinitionRole.Arn
+      TaskRoleArn: !GetAtt TaskDefinitionRole.Arn
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      Cpu: "512"
+      ContainerDefinitions:
+        -
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ECSLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          PortMappings:
+            - HostPort: 5000
+              Protocol: tcp
+              ContainerPort: 5000
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrImageName}:${EcrImageTag}
+          DisableNetworking: false
+          ReadonlyRootFilesystem: false
+          DockerLabels:
+            App: !Ref App
+          Name: !Sub ${AWS::StackName}-container
+
+  TaskDefinitionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+      Policies:
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:CreateCluster
+                  - ecs:DeregisterContainerInstance
+                  - ecs:DiscoverPollEndpoint
+                  - ecs:RegisterContainerInstance
+                  - ecs:Submit*
+                  - ecs:Poll
+                Resource: '*'
+          PolicyName: ecs_access
+        - PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:Create*
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                  - logs:Get*
+                Resource:
+                  - arn:aws:logs:*:*:*
+          PolicyName: logs_access
+        - PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:GetRepositoryPolicy
+                  - ecr:DescribeRepositories
+                  - ecr:ListImages
+                  - ecr:DescribeImages
+                  - ecr:BatchGetImage
+                Resource: "*"
+          PolicyName: ecr_access
+
+Outputs:
+  EcsClusterName:
+    Export:
+      Name: !Ref EcsCluster
+    Value: !Sub ${AWS::StackName}-EcsClusterName
+
+  EcsServiceName:
+    Export:
+      Name: !Ref EcsServiceName
+    Value: !Sub ${AWS::StackName}-EcsServiceName
+
