@@ -43,6 +43,7 @@ Resources:
                 - s3:*
                 - cloudformation:*
                 - sns:*
+                - ec2:*
               Effect: Allow
               Resource: '*'
         PolicyName: cloudformation-policies

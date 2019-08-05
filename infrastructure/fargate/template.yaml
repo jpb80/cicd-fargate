@@ -35,14 +35,6 @@ Parameters:
     Description: The application supported by this infrastructure.
     Type: String
 
-  Subnets:
-    Description: The comma separated list of SubnetIds.
-    Type: List<AWS::EC2::Subnet::Id>
-
-  SecurityGroups:
-    Description: The comma separated list of SecurityGroups.
-    Type: List<AWS::EC2::SecurityGroup::Id>
-
 Resources:
   EcsCluster:
     Type: AWS::ECS::Cluster
@@ -56,8 +48,10 @@ Resources:
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
-          SecurityGroups: !Ref SecurityGroups
-          Subnets: !Ref Subnets
+          SecurityGroups:
+            - !ImportValue network-SecurityGroupId
+          Subnets:
+            - !ImportValue network-SubnetId
       SchedulingStrategy: REPLICA
       TaskDefinition: !Ref TaskDefinition
 
