@@ -1,4 +1,4 @@
-# ChowNow: Docker image build pipeline
+# Docker image build pipeline
 
 A docker container build pipeline that builds
 the image with AWS CodeBuild and deploys the image to AWS ECR. 
