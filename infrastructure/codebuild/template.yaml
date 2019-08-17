@@ -78,11 +78,7 @@ Resources:
       - CodeBuildPolicy
     Properties:
       Artifacts:
-        Location: !ImportValue storage-ArtifactsBucketName
-        Name: artifact-greeting-app.zip
-        NamespaceType: BUILD_ID
-        Packaging: ZIP
-        Type: S3
+        Type: CODEPIPELINE
       Cache:
         Location: !ImportValue storage-CacheBucketName
         Type: S3
