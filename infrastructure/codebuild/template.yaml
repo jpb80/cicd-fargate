@@ -11,11 +11,6 @@ Parameters:
     Default: latest
     Type: String
 
-  GithubRepoUrl:
-    Description: |
-      The github repo url.
-    Type: String
-
 Resources:
   CodeBuildPolicy:
     Type: AWS::IAM::Policy
@@ -112,8 +107,4 @@ Resources:
       Name: !Ref AWS::StackName
       ServiceRole: !Ref CodeBuildRole
       Source:
-        Auth:
-          Resource: GITHUB
-          Type: OAUTH
-        Location: !Ref GithubRepoUrl
-        Type: GITHUB
+        Type: CODEPIPELINE

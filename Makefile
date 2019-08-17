@@ -77,7 +77,6 @@ deploy-stack-cbuild:
 	aws cloudformation deploy \
 		--template-file ${INFRA}/codebuild/${TEMPLATE} \
 		--stack-name codebuild \
-		--parameter-overrides GithubRepoUrl=https://github.com/jpb80/cicd-fargate.git \
 		--capabilities CAPABILITY_IAM \
 		--s3-bucket cfn-template-${AWS_ACCOUNTID}-${AWS_REGION} \
 		--role-arn arn:aws:iam::${AWS_ACCOUNTID}:role/cfn-deploy-stacks
