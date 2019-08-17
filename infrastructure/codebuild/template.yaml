@@ -11,6 +11,11 @@ Parameters:
     Default: latest
     Type: String
 
+  GithubRepoUrl:
+    Description: |
+      The github repo url.
+    Type: String
+
 Resources:
   CodeBuildPolicy:
     Type: AWS::IAM::Policy
@@ -39,11 +44,6 @@ Resources:
               - ""
               - - !ImportValue storage-SourceCodeBucketArn
                 - /*
-        - Action:
-            - codecommit:GitPull
-          Effect: Allow
-          Resource:
-            - !ImportValue codecommit-CodeCommitRepoArn
         - Action:
             - kms:GenerateDataKey*
             - kms:Encrypt
@@ -112,4 +112,8 @@ Resources:
       Name: !Ref AWS::StackName
       ServiceRole: !Ref CodeBuildRole
       Source:
-        Type: CODEPIPELINE
+        Auth:
+          Resource: GITHUB
+          Type: OAUTH
+        Location: !Ref GithubRepoUrl
+        Type: GITHUB

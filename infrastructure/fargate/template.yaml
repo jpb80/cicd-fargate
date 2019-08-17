@@ -21,13 +21,6 @@ Parameters:
     Description: The ECR image name used for the Fargate container.
     Type: String
 
-  ContainerHostname:
-    Default: 'fargatecontainer'
-    Description: The docker container hostname.
-    MaxLength: '32'
-    MinLength: '1'
-    Type: String
-
   App:
     AllowedPattern: '^[A-Za-z0-9_-]*$'
     ConstraintDescription: |
@@ -36,6 +29,11 @@ Parameters:
     Type: String
 
 Resources:
+  EcsServiceLinkedRole:
+    Type: AWS::IAM::ServiceLinkedRole
+    Properties:
+      AWSServiceName: ecs.amazonaws.com
+
   EcsCluster:
     Type: AWS::ECS::Cluster
 
@@ -143,14 +141,16 @@ Resources:
                 Resource: "*"
           PolicyName: ecr_access
 
-Outputs:
-  EcsClusterName:
-    Export:
-      Name: !Ref EcsCluster
-    Value: !Sub ${AWS::StackName}-EcsClusterName
+  EcsClusterNameParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${AWS::StackName}-EcsClusterName
+      Type: String
+      Value: !Ref EcsCluster
 
-  EcsServiceName:
-    Export:
-      Name: !Ref EcsServiceName
-    Value: !Sub ${AWS::StackName}-EcsServiceName
-
+  EcsServiceNameParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${AWS::StackName}-EcsServiceName
+      Type: String
+      Value: !Ref EcsService

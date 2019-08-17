@@ -77,6 +77,18 @@ deploy-stack-cbuild:
 	aws cloudformation deploy \
 		--template-file ${INFRA}/codebuild/${TEMPLATE} \
 		--stack-name codebuild \
+		--parameter-overrides GithubRepoUrl=https://github.com/jpb80/cicd-fargate.git \
+		--capabilities CAPABILITY_IAM \
+		--s3-bucket cfn-template-${AWS_ACCOUNTID}-${AWS_REGION} \
+		--role-arn arn:aws:iam::${AWS_ACCOUNTID}:role/cfn-deploy-stacks
+
+.PHONY: deploy-stack-pipeline
+deploy-stack-pipeline:
+	. venv/bin/activate; \
+	cfn-lint ${INFRA}/codepipeline/${TEMPLATE}; \
+	aws cloudformation deploy \
+		--template-file ${INFRA}/codepipeline/${TEMPLATE} \
+		--stack-name codepipeline \
 		--capabilities CAPABILITY_IAM \
 		--s3-bucket cfn-template-${AWS_ACCOUNTID}-${AWS_REGION} \
 		--role-arn arn:aws:iam::${AWS_ACCOUNTID}:role/cfn-deploy-stacks
@@ -88,7 +100,7 @@ deploy-stack-fargate:
 	aws cloudformation deploy \
 		--template-file ${INFRA}/fargate/${TEMPLATE} \
 		--stack-name fargate \
-		--parameter-overrides EcrImageName=greeting-app, App=greeting-app \
+		--parameter-overrides EcrImageName=greeting-app App=greeting-app \
 		--capabilities CAPABILITY_IAM \
 		--s3-bucket cfn-template-${AWS_ACCOUNTID}-${AWS_REGION} \
 		--role-arn arn:aws:iam::${AWS_ACCOUNTID}:role/cfn-deploy-stacks
@@ -106,7 +118,7 @@ deploy-stack-network:
 
 
 .PHONY: deploy-all-stacks # deploy all stacks
-deploy-all-stacks: deploy-stack-cfn deploy-stack-storage deploy-stack-ecr deploy-stack-ccommit deploy-stack-cbuild deploy-stack-network deploy-stack-fargate
+deploy-all-stacks: deploy-stack-cfn deploy-stack-storage deploy-stack-ecr deploy-stack-network deploy-stack-cbuild deploy-stack-fargate deploy-stack-pipeline
 
 .PHONY: run-codebuild
 run-codebuild:

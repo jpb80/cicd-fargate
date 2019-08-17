@@ -2,21 +2,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Cloudformation stack for CodePipeline resources.
 Parameters:
-  GitHubOAuthToken:
-    Type: String
-    NoEcho: true
-    MinLength: 40
-    MaxLength: 40
-    AllowedPattern: '[a-z0-9]*'
-
   GitHubOwner:
     Type: String
-    Default: symphoniacloud
+    Default: jpb80
     AllowedPattern: "[A-Za-z0-9-]+"
 
   GitHubRepo:
     Type: String
-    Default: github-codepipeline
+    Default: cicd-fargate
     AllowedPattern: "[A-Za-z0-9-]+"
 
   GitHubBranch:
@@ -30,7 +23,7 @@ Resources:
     Properties:
       ArtifactStore:
         Type: S3
-        Location: !ImportValue storage-ArtifactsBucket
+        Location: !ImportValue storage-ArtifactsBucketName
       RestartExecutionOnUpdate: true
       RoleArn: !GetAtt CodePipelineRole.Arn
       Stages:
@@ -50,7 +43,11 @@ Resources:
             Repo: !Ref GitHubRepo
             Branch: !Ref GitHubBranch
             PollForSourceChanges: true
-            OAuthToken: !Ref GitHubOAuthToken
+            OAuthToken: !Join
+              - ''
+              - - '{{resolve:secretsmanager:'
+                - 'github_auth'
+                - ':SecretString:key}}'
           RunOrder: 1
       - Name: Build
         Actions:
@@ -67,17 +64,25 @@ Resources:
           RunOrder: 1
       - Name: Deploy
         Actions:
-        - Name: ECS Fargate
+        - Name: ECS
           ActionTypeId:
             Category: Deploy
             Owner: AWS
-            Provider: Amazon ECS
+            Provider: ECS
             Version: '1'
           InputArtifacts:
             - Name: SourceCode
           Configuration:
-            ClusterName: !ImportValue fargate-ClusterName
-            ServiceName: !ImportValue fargate-ServiceName
+            ClusterName: !Join
+              - ''
+              - - '{{resolve:ssm:'
+                - 'fargate-EcsClusterName:'
+                - '1}}'
+            ServiceName: !Join
+              - ''
+              - - '{{resolve:ssm:'
+                - 'fargate-EcsServiceName:'
+                - '1}}'
             FileName: imagedefinitions.json
           RunOrder: 1
 
@@ -86,7 +91,11 @@ Resources:
     Properties:
       Authentication: GITHUB_HMAC
       AuthenticationConfiguration:
-        SecretToken: !Ref GitHubOAuthToken
+        SecretToken: !Join
+          - ''
+          - - '{{resolve:secretsmanager:'
+            - 'github_auth'
+            - ':SecretString:key}}'
       RegisterWithThirdParty: true
       Filters:
       - JsonPath: "$.ref"
